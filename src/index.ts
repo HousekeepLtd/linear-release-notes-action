@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 
 import { extractLastReleaseMessage } from "./utils";
 
@@ -113,7 +113,7 @@ async function run(): Promise<void> {
             headers: {
               "X-TrackerToken": PT_TOKEN
             }
-          }
+          } as InternalAxiosRequestConfig
         );
         story = data;
       } catch (e: any) {
