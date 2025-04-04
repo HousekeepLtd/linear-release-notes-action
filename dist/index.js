@@ -103,7 +103,7 @@ function run() {
                 .map(commit => commit.commit.message)
                 .map(message => {
                 core.info(`Commit message: ${message}`);
-                const matches = message.match(/^\[HK-([0-9]+)]/);
+                const matches = message.match(/^\[(HK-[0-9]+)]/);
                 return matches ? matches[1] : undefined;
             })
                 .filter(ticket => ticket);
@@ -148,12 +148,12 @@ function run() {
                     }
                 }
                 const releaseNotes = (0, utils_1.extractLastReleaseMessage)(issue.description);
-                const title = issue.title.replace("`", '"');
+                const title = issue.title.replace("`", '"').trim();
                 commentBody += '**TECH';
                 if (issueType) {
                     commentBody += ` (${issueType})`;
                 }
-                commentBody += `: ${title.trim()}**\n`;
+                commentBody += `: ${title}**\n`;
                 if (releaseNotes) {
                     commentBody += `${releaseNotes}\n`;
                 }

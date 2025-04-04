@@ -71,7 +71,7 @@ async function run(): Promise<void> {
       .map(commit => commit.commit.message)
       .map(message => {
         core.info(`Commit message: ${message}`);
-        const matches = message.match(/^\[HK-([0-9]+)]/);
+        const matches = message.match(/^\[(HK-[0-9]+)]/);
         return matches ? matches[1] : undefined;
       })
       .filter(ticket => ticket);
