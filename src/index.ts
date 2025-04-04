@@ -1,18 +1,8 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import axios, { InternalAxiosRequestConfig } from "axios";
+import { Issue, LinearClient } from "@linear/sdk";
 
 import { extractLastReleaseMessage } from "./utils";
-
-type StoryType = "bug" | "chore" | "feature";
-
-interface PivotalTrackerStory {
-  name: string;
-  description: string;
-  url: string;
-  story_type: StoryType;
-  release_notes?: string;
-}
 
 const formatCommentBodyForGoogleChat = (commentBody: string): string => {
   let str = "```\n";
@@ -21,13 +11,15 @@ const formatCommentBodyForGoogleChat = (commentBody: string): string => {
   return str;
 };
 
+const issueTypeLabels = ['bug', 'feature', 'chore'];
+
 /**
  * Main function.
  */
 async function run(): Promise<void> {
   try {
     const GITHUB_TOKEN = core.getInput("github-token");
-    const PT_TOKEN = core.getInput("pt-token");
+    const LINEAR_TOKEN = core.getInput("linear-token");
 
     if (!github.context.payload.pull_request) {
       throw new Error("No pull request found.");
@@ -35,6 +27,8 @@ async function run(): Promise<void> {
 
     const pullRequest = github.context.payload.pull_request;
     const octokit = github.getOctokit(GITHUB_TOKEN);
+
+    const linearClient = new LinearClient({ apiKey: LINEAR_TOKEN });
 
     const commits: any[] = [];
 
@@ -71,57 +65,42 @@ async function run(): Promise<void> {
     core.info(`Found ${commits.length} commits.`);
 
     /*
-     * From commits, filter down to a list of Pivotal Tracker story IDs.
+     * From commits, filter down to a list of Linear issue IDs.
      */
-    let storyIds = commits
+    let issueIds = commits
       .map(commit => commit.commit.message)
       .map(message => {
         core.info(`Commit message: ${message}`);
-        const matches = message.match(/^\[#([0-9]+?)\]/);
-        if (!matches) return undefined;
-        return matches[1]; // Just the ticket number, with no # or [] symbols.
+        const matches = message.match(/^\[HK-([0-9]+)]/);
+        return matches ? matches[1] : undefined;
       })
       .filter(ticket => ticket);
 
     /*
-     * De-duplicate the story IDs.
+     * De-duplicate the issue IDs.
      */
-    storyIds = [...new Set(storyIds)];
+    issueIds = [...new Set(issueIds)];
 
-    if (storyIds.length === 0) {
-      core.info(`No Pivotal Tracker story IDs detected`);
+    if (issueIds.length === 0) {
+      core.info(`No Linear issue IDs detected`);
       return;
     }
 
-    core.info(`Pivotal Tracker story IDs detected: ${storyIds.join(", ")}`);
+    core.info(`Linear issue IDs detected: ${issueIds.join(", ")}`);
 
     /*
-     * Get the data for each Pivotal Tracker story.
+     * Get the data for each Linear issue.
      */
-    let stories: PivotalTrackerStory[] = [];
-    for (const storyId of storyIds) {
-      core.info(`Getting data for story ${storyId}...`);
-      let story;
+    let issues: Issue[] = [];
+    for (const issueId of issueIds) {
+      core.info(`Getting data for issue ${issueId}...`);
       try {
-        const { data } = await axios.get<PivotalTrackerStory>(
-          `https://www.pivotaltracker.com/services/v5/stories/${storyId}`,
-          {
-            headers: {
-              "X-TrackerToken": PT_TOKEN
-            }
-          } as InternalAxiosRequestConfig
-        );
-        story = data;
+        issues.push(await linearClient.issue(issueId));
       } catch (e: any) {
-        core.info(`Could not retrieve story.`);
+        core.info(`Could not retrieve issue.`);
         core.info(e.message);
         core.error(e, e.stack);
-        continue; // Skip to next iteration.
       }
-
-      story.release_notes = extractLastReleaseMessage(story.description);
-
-      stories.push(story);
     }
 
     const commentWarning =
@@ -134,13 +113,25 @@ async function run(): Promise<void> {
      * Compose the comment.
      */
     let commentBody = "";
-    for (const story of stories) {
-      const title = story.name.replace("`", '"');
-      commentBody += `**TECH (${story.story_type}): ${title.trim()}**\n`;
-      if (story.release_notes) {
-        commentBody += `${story.release_notes}\n`;
+    for (const issue of issues) {
+      let issueType: string | undefined = undefined;
+      for (const issueTypeLabel of issueTypeLabels) {
+        if (issue.labelIds.includes(issueTypeLabel)) {
+          issueType = issueTypeLabel;
+          break;
+        }
       }
-      commentBody += `**Link:** ${story.url}`;
+      const releaseNotes = extractLastReleaseMessage(issue.description);
+      const title = issue.title.replace("`", '"');
+      commentBody += '**TECH';
+      if (issueType) {
+        commentBody += ` (${issueType})`;
+      }
+      commentBody += `: ${title.trim()}**\n`;
+      if (releaseNotes) {
+        commentBody += `${releaseNotes}\n`;
+      }
+      commentBody += `**Link:** ${issue.url}`;
       commentBody += `\n\n`;
     }
 
