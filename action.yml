@@ -1,12 +1,12 @@
-name: 'Pivotal Tracker Release Notes'
-description: 'Collates release notes within Pivotal Tracker tickets'
-author: 'Jay Vincent'
+name: 'Linear Release Notes'
+description: 'Collates release notes within Linear tickets'
+author: 'Chris Conn'
 inputs:
   github-token:
     description: 'Pass in secrets.GITHUB_TOKEN'
     required: true
-  pt-token:
-    description: 'Pass in secrets.PT_TOKEN'
+  linear-token:
+    description: 'Pass in secrets.LINEAR_TOKEN'
     required: true
 
 runs:
