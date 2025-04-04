@@ -36,20 +36,16 @@ async function run(): Promise<void> {
     const pullRequest = github.context.payload.pull_request;
     const octokit = github.getOctokit(GITHUB_TOKEN);
 
-    /**
-     * Get all commits on the PR.
-     */
+    const commits: any[] = [];
 
-    let commits: any[] = [];
-
-    /**
+    /*
      * Attempt to get all commits on the PR. This endpoint will return a maximum of
      * 250 commits, with a 100 per page limit. Loop over pages 1, 2 and 3 to create an
      * array of commits.
      */
     let page = 1;
     for (const max of [0, 100, 200]) {
-      /**
+      /*
        * Early exit. No need to check subsequent pages if we have received less than
        * the maximum number of results.
        */
@@ -74,7 +70,7 @@ async function run(): Promise<void> {
 
     core.info(`Found ${commits.length} commits.`);
 
-    /**
+    /*
      * From commits, filter down to a list of Pivotal Tracker story IDs.
      */
     let storyIds = commits
@@ -87,8 +83,8 @@ async function run(): Promise<void> {
       })
       .filter(ticket => ticket);
 
-    /**
-     * De-deduplicate the story IDs.
+    /*
+     * De-duplicate the story IDs.
      */
     storyIds = [...new Set(storyIds)];
 
@@ -99,7 +95,7 @@ async function run(): Promise<void> {
 
     core.info(`Pivotal Tracker story IDs detected: ${storyIds.join(", ")}`);
 
-    /**
+    /*
      * Get the data for each Pivotal Tracker story.
      */
     let stories: PivotalTrackerStory[] = [];
@@ -134,7 +130,7 @@ async function run(): Promise<void> {
           "Some release notes may be missing.\n\n"
         : "";
 
-    /**
+    /*
      * Compose the comment.
      */
     let commentBody = "";
@@ -148,7 +144,7 @@ async function run(): Promise<void> {
       commentBody += `\n\n`;
     }
 
-    /**
+    /*
      * Add the comment to the PR.
      */
     if (commentBody) {
@@ -166,7 +162,7 @@ async function run(): Promise<void> {
   }
 }
 
-/**
+/*
  * Main entry point
  */
 run();
