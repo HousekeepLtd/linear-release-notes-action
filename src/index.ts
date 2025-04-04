@@ -122,12 +122,12 @@ async function run(): Promise<void> {
         }
       }
       const releaseNotes = extractLastReleaseMessage(issue.description);
-      const title = issue.title.replace("`", '"');
+      const title = issue.title.replace("`", '"').trim();
       commentBody += '**TECH';
       if (issueType) {
         commentBody += ` (${issueType})`;
       }
-      commentBody += `: ${title.trim()}**\n`;
+      commentBody += `: ${title}**\n`;
       if (releaseNotes) {
         commentBody += `${releaseNotes}\n`;
       }
