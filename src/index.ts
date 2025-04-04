@@ -156,9 +156,7 @@ async function run(): Promise<void> {
       await octokit.issues.createComment({
         ...github.context.repo,
         issue_number: pullRequest.number,
-        body:
-          commentWarning +
-          formatCommentBodyForGoogleChat(commentBody)
+        body: commentWarning + formatCommentBodyForGoogleChat(commentBody)
       });
     } else {
       core.info("No comment to add to pull request");
